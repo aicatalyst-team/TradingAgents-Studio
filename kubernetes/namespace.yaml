@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: poc-tradingagents-studio
+  labels:
+    app.kubernetes.io/name: tradingagents-studio
+    app.kubernetes.io/managed-by: autopoc
