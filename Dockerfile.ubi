@@ -1,0 +1,57 @@
+# ============================================================
+# TradingAgents-Studio — UBI-based multi-stage Dockerfile
+# Stage 1: Build Vue 3 frontend
+# Stage 2: Python backend with frontend dist embedded
+# ============================================================
+
+# --- Stage 1: Frontend build ---
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS frontend-builder
+
+WORKDIR /opt/app-root/src
+
+# Copy frontend package files first for layer caching
+COPY web/frontend/package.json web/frontend/package-lock.json ./
+
+RUN npm ci
+
+# Copy frontend source
+COPY web/frontend/ ./
+
+# Build the Vue 3 app
+RUN npm run build
+
+# --- Stage 2: Python backend ---
+FROM registry.access.redhat.com/ubi9/python-312
+
+WORKDIR /opt/app-root/src
+
+# Copy dependency specification first for layer caching
+COPY pyproject.toml ./
+
+# Install the package with web and cn extras
+# Use a two-step approach: install deps then copy source
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Copy full source code
+COPY . .
+
+# Install the package in editable mode with web extras
+RUN pip install --no-cache-dir -e ".[web,cn]"
+
+# Copy built frontend from stage 1
+COPY --from=frontend-builder /opt/app-root/src/dist/ /opt/app-root/src/web/frontend/dist/
+
+# Create writable directories for runtime
+RUN mkdir -p /opt/app-root/src/.tradingagents && \
+    chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    TRADINGAGENTS_LOG_DIR=/opt/app-root/src/.tradingagents \
+    HOME=/opt/app-root/src
+
+EXPOSE 8080
+
+USER 1001
+
+CMD ["uvicorn", "web.backend.main:app", "--host", "0.0.0.0", "--port", "8080"]
