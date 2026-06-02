@@ -41,7 +41,8 @@ RUN pip install --no-cache-dir -e ".[web,cn]"
 # Copy built frontend from stage 1
 COPY --from=frontend-builder /opt/app-root/src/dist/ /opt/app-root/src/web/frontend/dist/
 
-# Create writable directories for runtime
+# OpenShift compatibility: fix permissions as root
+USER 0
 RUN mkdir -p /opt/app-root/src/.tradingagents && \
     chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
 
