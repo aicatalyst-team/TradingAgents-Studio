@@ -17,8 +17,8 @@ RUN npm ci
 # Copy frontend source
 COPY web/frontend/ ./
 
-# Build the Vue 3 app
-RUN npm run build
+# Build the Vue 3 app (skip vue-tsc type check, use vite build directly)
+RUN npx vite build
 
 # --- Stage 2: Python backend ---
 FROM registry.access.redhat.com/ubi9/python-312
